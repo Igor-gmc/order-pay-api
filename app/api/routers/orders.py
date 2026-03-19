@@ -2,8 +2,9 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import OrderServiceDep
+from app.api.dependencies import OrderServiceDep, PaymentServiceDep
 from app.schemas.orders import OrderCreate, OrderList, OrderRead
+from app.schemas.payments import PaymentList
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -30,3 +31,14 @@ async def get_order(order_id: uuid.UUID, service: OrderServiceDep):
             detail=f"Order '{order_id}' not found",
         )
     return order
+
+
+@router.get("/{order_id}/payments", response_model=PaymentList)
+async def get_order_payments(order_id: uuid.UUID, service: PaymentServiceDep):
+    try:
+        return await service.get_by_order(order_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )

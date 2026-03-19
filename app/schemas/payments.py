@@ -24,3 +24,8 @@ class PaymentRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PaymentList(BaseModel):
+    items: list[PaymentRead]
+    count: int
