@@ -112,7 +112,7 @@ llama-finetuned-final/
 *.pt
 *.pth
 *.ckpt
-models/
+
 checkpoints/
 
 # Подготовленные датасеты
