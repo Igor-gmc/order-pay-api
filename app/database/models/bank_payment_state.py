@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import BankPaymentStatus
@@ -32,9 +32,11 @@ class BankPaymentState(Base):
         nullable=False,
     )
     bank_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    bank_paid_at: Mapped[datetime | None] = mapped_column(default=None)
+    bank_paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None,
+    )
     last_synced_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(),
+        DateTime(timezone=True), server_default=func.now(),
     )
     sync_error: Mapped[str | None] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(
