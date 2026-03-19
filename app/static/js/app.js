@@ -1,9 +1,9 @@
 "use strict";
 
 const STATUS_LABELS = {
-    unpaid: "Unpaid",
-    partially_paid: "Partially paid",
-    paid: "Paid",
+    unpaid: "Не оплачен",
+    partially_paid: "Частично оплачен",
+    paid: "Оплачен",
 };
 
 const STATUS_CLASSES = {
@@ -30,7 +30,7 @@ let _orders = [];
 
 function buildOrderOptions(filterPaid) {
     const items = filterPaid ? _orders.filter(o => o.payment_status !== "paid") : _orders;
-    return '<option value="">-- select order --</option>' +
+    return '<option value="">-- выберите заказ --</option>' +
         items.map(o =>
             `<option value="${o.id}">#${o.number} — ${formatMoney(o.amount_total)} (${STATUS_LABELS[o.payment_status] || o.payment_status})</option>`
         ).join("");
@@ -82,7 +82,7 @@ async function extractError(res, fallback) {
 function renderOrders(orders) {
     const container = document.getElementById("orders-list");
     if (!orders.length) {
-        container.innerHTML = '<p class="empty">No orders yet</p>';
+        container.innerHTML = '<p class="empty">Заказов пока нет</p>';
         return;
     }
 
@@ -101,12 +101,12 @@ function renderOrders(orders) {
         <table class="table">
             <thead>
                 <tr>
-                    <th>Number</th>
-                    <th>Total</th>
-                    <th>Paid</th>
-                    <th>Refunded</th>
-                    <th>Status</th>
-                    <th>Created</th>
+                    <th>Номер</th>
+                    <th>Сумма</th>
+                    <th>Оплачено</th>
+                    <th>Возвращено</th>
+                    <th>Статус</th>
+                    <th>Создан</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -122,7 +122,7 @@ async function loadOrders() {
         renderOrders(data.items);
     } catch (err) {
         document.getElementById("orders-list").innerHTML =
-            '<p class="empty empty--error">Failed to load orders</p>';
+            '<p class="empty empty--error">Не удалось загрузить заказы</p>';
     }
 }
 
@@ -140,7 +140,7 @@ function statusBadge(payload) {
 function renderLogs(logs) {
     const container = document.getElementById("logs-list");
     if (!logs.length) {
-        container.innerHTML = '<p class="empty">No logs yet</p>';
+        container.innerHTML = '<p class="empty">Записей пока нет</p>';
         return;
     }
 
@@ -164,7 +164,7 @@ async function loadLogs() {
         renderLogs(data.items);
     } catch (err) {
         document.getElementById("logs-list").innerHTML =
-            '<p class="empty empty--error">Failed to load logs</p>';
+            '<p class="empty empty--error">Не удалось загрузить журнал</p>';
     }
 }
 
@@ -181,7 +181,7 @@ async function createOrder(amountTotal) {
         });
 
         if (!res.ok) {
-            showError("order-form-error", await extractError(res, "Failed to create order"));
+            showError("order-form-error", await extractError(res, "Не удалось создать заказ"));
             return;
         }
 
@@ -189,7 +189,7 @@ async function createOrder(amountTotal) {
         await Promise.all([loadOrders(), loadLogs()]);
         refreshAllSelects();
     } catch {
-        showError("order-form-error", "Network error");
+        showError("order-form-error", "Ошибка сети");
     }
 }
 
@@ -217,8 +217,8 @@ async function submitCashPayment() {
     const orderId = document.getElementById("cash-order-select").value;
     const amount = document.getElementById("cash-amount").value.trim();
 
-    if (!orderId) { showError("cash-form-error", "Select an order"); return; }
-    if (!amount)  { showError("cash-form-error", "Enter amount"); return; }
+    if (!orderId) { showError("cash-form-error", "Выберите заказ"); return; }
+    if (!amount)  { showError("cash-form-error", "Введите сумму"); return; }
 
     try {
         const res = await fetch("/payments/cash", {
@@ -228,7 +228,7 @@ async function submitCashPayment() {
         });
 
         if (!res.ok) {
-            showError("cash-form-error", await extractError(res, "Payment failed"));
+            showError("cash-form-error", await extractError(res, "Ошибка оплаты"));
             return;
         }
 
@@ -236,7 +236,7 @@ async function submitCashPayment() {
         await Promise.all([loadOrders(), loadLogs()]);
         refreshAllSelects();
     } catch {
-        showError("cash-form-error", "Network error");
+        showError("cash-form-error", "Ошибка сети");
     }
 }
 
@@ -264,8 +264,8 @@ async function submitCardPayment() {
     const orderId = document.getElementById("card-order-select").value;
     const amount = document.getElementById("card-amount").value.trim();
 
-    if (!orderId) { showError("card-form-error", "Select an order"); return; }
-    if (!amount)  { showError("card-form-error", "Enter amount"); return; }
+    if (!orderId) { showError("card-form-error", "Выберите заказ"); return; }
+    if (!amount)  { showError("card-form-error", "Введите сумму"); return; }
 
     try {
         const res = await fetch("/payments/acquiring", {
@@ -275,7 +275,7 @@ async function submitCardPayment() {
         });
 
         if (!res.ok) {
-            showError("card-form-error", await extractError(res, "Payment failed"));
+            showError("card-form-error", await extractError(res, "Ошибка оплаты"));
             return;
         }
 
@@ -283,7 +283,7 @@ async function submitCardPayment() {
         await Promise.all([loadOrders(), loadBankPayments(), loadLogs()]);
         refreshAllSelects();
     } catch {
-        showError("card-form-error", "Network error");
+        showError("card-form-error", "Ошибка сети");
     }
 }
 
@@ -299,7 +299,7 @@ const BANK_STATUS_CLASSES = {
 function renderBankPayments(items) {
     const container = document.getElementById("bank-list");
     if (!items.length) {
-        container.innerHTML = '<p class="empty">No bank payments yet</p>';
+        container.innerHTML = '<p class="empty">Банковских платежей нет</p>';
         return;
     }
 
@@ -320,8 +320,8 @@ function renderBankPayments(items) {
             <td class="cell--error">${b.sync_error || ""}</td>
             <td class="cell--actions">
                 <select class="select select--sm" id="status-${b.bank_payment_id}">${options}</select>
-                <button class="btn btn--sm btn--ghost" onclick="applyBankStatus('${b.bank_payment_id}')">Apply</button>
-                <button class="btn btn--sm btn--blue" onclick="syncPayment('${b.payment_id}')">Sync</button>
+                <button class="btn btn--sm btn--ghost" onclick="applyBankStatus('${b.bank_payment_id}')">Применить</button>
+                <button class="btn btn--sm btn--blue" onclick="syncPayment('${b.payment_id}')">Синхр.</button>
             </td>
         </tr>`;
     }).join("");
@@ -330,13 +330,13 @@ function renderBankPayments(items) {
         <table class="table">
             <thead>
                 <tr>
-                    <th>Payment</th>
-                    <th>Bank ID</th>
-                    <th>Status</th>
-                    <th>Amount</th>
-                    <th>Synced</th>
-                    <th>Error</th>
-                    <th>Actions</th>
+                    <th>Платёж</th>
+                    <th>ID банка</th>
+                    <th>Статус</th>
+                    <th>Сумма</th>
+                    <th>Синхр.</th>
+                    <th>Ошибка</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -351,7 +351,7 @@ async function loadBankPayments() {
         renderBankPayments(data.items);
     } catch {
         document.getElementById("bank-list").innerHTML =
-            '<p class="empty empty--error">Failed to load bank payments</p>';
+            '<p class="empty empty--error">Не удалось загрузить платежи банка</p>';
     }
 }
 
@@ -362,7 +362,7 @@ async function syncPayment(paymentId) {
         const res = await fetch(`/bank/sync/${paymentId}`, { method: "POST" });
 
         if (!res.ok) {
-            showError("bank-error", await extractError(res, "Sync failed"));
+            showError("bank-error", await extractError(res, "Ошибка синхронизации"));
             return;
         }
 
@@ -370,7 +370,7 @@ async function syncPayment(paymentId) {
         refreshAllSelects();
         refreshRefundPayments();
     } catch {
-        showError("bank-error", "Network error");
+        showError("bank-error", "Ошибка сети");
     }
 }
 
@@ -390,25 +390,25 @@ async function applyBankStatus(bankPaymentId) {
         });
 
         if (!res.ok) {
-            showError("bank-error", await extractError(res, "Status update failed"));
+            showError("bank-error", await extractError(res, "Не удалось обновить статус"));
             return;
         }
 
         await Promise.all([loadBankPayments(), loadLogs()]);
     } catch {
-        showError("bank-error", "Network error");
+        showError("bank-error", "Ошибка сети");
     }
 }
 
 /* --- Refund modal --- */
 
 const PAYMENT_STATUS_LABELS = {
-    pending: "Pending",
-    completed: "Completed",
-    cancelled: "Cancelled",
-    part_refunded: "Part refunded",
-    refunded: "Refunded",
-    failed: "Failed",
+    pending: "Ожидает",
+    completed: "Завершён",
+    cancelled: "Отменён",
+    part_refunded: "Частичный возврат",
+    refunded: "Возвращён",
+    failed: "Ошибка",
 };
 
 function openRefundModal() {
@@ -418,7 +418,7 @@ function openRefundModal() {
 
     clearError("refund-form-error");
     document.getElementById("refund-amount").value = "";
-    paymentSelect.innerHTML = '<option value="">-- select payment --</option>';
+    paymentSelect.innerHTML = '<option value="">-- выберите платёж --</option>';
 
     orderSelect.innerHTML = buildOrderOptions(false);
 
@@ -431,23 +431,23 @@ function closeRefundModal() {
 
 async function loadPaymentsForOrder(orderId) {
     const paymentSelect = document.getElementById("refund-payment-select");
-    paymentSelect.innerHTML = '<option value="">Loading...</option>';
+    paymentSelect.innerHTML = '<option value="">Загрузка...</option>';
 
     try {
         const res = await fetch(`/orders/${orderId}/payments`);
         const data = await res.json();
 
         if (!data.items.length) {
-            paymentSelect.innerHTML = '<option value="">No payments</option>';
+            paymentSelect.innerHTML = '<option value="">Нет платежей</option>';
             return;
         }
 
-        paymentSelect.innerHTML = '<option value="">-- select payment --</option>' +
+        paymentSelect.innerHTML = '<option value="">-- выберите платёж --</option>' +
             data.items.map(p =>
                 `<option value="${p.id}">${p.payment_type} — ${formatMoney(p.amount)} (${PAYMENT_STATUS_LABELS[p.status] || p.status})</option>`
             ).join("");
     } catch {
-        paymentSelect.innerHTML = '<option value="">Failed to load</option>';
+        paymentSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
     }
 }
 
@@ -458,9 +458,9 @@ async function submitRefund() {
     const paymentId = document.getElementById("refund-payment-select").value;
     const amount = document.getElementById("refund-amount").value.trim();
 
-    if (!orderId)   { showError("refund-form-error", "Select an order"); return; }
-    if (!paymentId) { showError("refund-form-error", "Select a payment"); return; }
-    if (!amount)    { showError("refund-form-error", "Enter amount"); return; }
+    if (!orderId)   { showError("refund-form-error", "Выберите заказ"); return; }
+    if (!paymentId) { showError("refund-form-error", "Выберите платёж"); return; }
+    if (!amount)    { showError("refund-form-error", "Введите сумму"); return; }
 
     try {
         const res = await fetch("/refunds", {
@@ -470,7 +470,7 @@ async function submitRefund() {
         });
 
         if (!res.ok) {
-            showError("refund-form-error", await extractError(res, "Refund failed"));
+            showError("refund-form-error", await extractError(res, "Ошибка возврата"));
             return;
         }
 
@@ -478,7 +478,7 @@ async function submitRefund() {
         await Promise.all([loadOrders(), loadBankPayments(), loadLogs()]);
         refreshAllSelects();
     } catch {
-        showError("refund-form-error", "Network error");
+        showError("refund-form-error", "Ошибка сети");
     }
 }
 
@@ -488,7 +488,7 @@ function renderBankMode(online) {
     const toggle = document.getElementById("bank-mode-toggle");
     const label = document.getElementById("bank-mode-label");
     toggle.checked = online;
-    label.textContent = online ? "Online" : "Offline";
+    label.textContent = online ? "Онлайн" : "Офлайн";
     label.className = online ? "toggle__label" : "toggle__label toggle__label--off";
 }
 
@@ -511,7 +511,7 @@ async function setBankMode(online) {
         });
 
         if (!res.ok) {
-            showError("bank-mode-error", await extractError(res, "Failed to switch mode"));
+            showError("bank-mode-error", await extractError(res, "Не удалось переключить режим"));
             return;
         }
 
@@ -519,7 +519,7 @@ async function setBankMode(online) {
         renderBankMode(data.online);
         await loadLogs();
     } catch {
-        showError("bank-mode-error", "Failed to switch mode");
+        showError("bank-mode-error", "Не удалось переключить режим");
     }
 }
 
@@ -567,7 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (orderId) {
             loadPaymentsForOrder(orderId);
         } else {
-            paymentSelect.innerHTML = '<option value="">-- select payment --</option>';
+            paymentSelect.innerHTML = '<option value="">-- выберите платёж --</option>';
         }
     });
 });

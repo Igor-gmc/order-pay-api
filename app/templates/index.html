@@ -13,14 +13,14 @@
 
     <main class="panels">
         <section class="panel panel--company">
-            <h2 class="panel__heading">Company</h2>
+            <h2 class="panel__heading">Компания</h2>
             <div class="panel__toolbar">
                 <form id="create-order-form" class="inline-form">
-                    <input type="number" id="order-amount" class="input" placeholder="Amount" step="0.01" min="0.01" required>
-                    <button type="submit" class="btn">Create order</button>
-                    <button type="button" id="open-cash-btn" class="btn btn--green">Pay cash</button>
-                    <button type="button" id="open-card-btn" class="btn btn--blue">Pay card</button>
-                    <button type="button" id="open-refund-btn" class="btn btn--red">Refund</button>
+                    <input type="number" id="order-amount" class="input" placeholder="Сумма" step="0.01" min="0.01" required>
+                    <button type="submit" class="btn">Создать заказ</button>
+                    <button type="button" id="open-cash-btn" class="btn btn--green">Наличные</button>
+                    <button type="button" id="open-card-btn" class="btn btn--blue">Картой</button>
+                    <button type="button" id="open-refund-btn" class="btn btn--red">Возврат</button>
                     <span id="order-form-error" class="form-error"></span>
                 </form>
             </div>
@@ -28,15 +28,15 @@
         </section>
 
         <section class="panel panel--bank">
-            <h2 class="panel__heading">Bank</h2>
+            <h2 class="panel__heading">Банк</h2>
             <div class="panel__toolbar">
                 <div class="inline-form">
-                    <span class="toolbar__label">Bank:</span>
+                    <span class="toolbar__label">Банк:</span>
                     <label class="toggle">
                         <input type="checkbox" id="bank-mode-toggle" checked>
                         <span class="toggle__slider"></span>
                     </label>
-                    <span id="bank-mode-label" class="toggle__label">Online</span>
+                    <span id="bank-mode-label" class="toggle__label">Онлайн</span>
                     <span id="bank-mode-error" class="form-error"></span>
                 </div>
             </div>
@@ -48,26 +48,26 @@
     </main>
 
     <section class="logs">
-        <h2 class="logs__heading">Logs</h2>
+        <h2 class="logs__heading">Журнал</h2>
         <div class="logs__body" id="logs-list"></div>
     </section>
 
     <div id="card-modal" class="modal" hidden>
         <div class="modal__backdrop"></div>
         <div class="modal__dialog">
-            <h3 class="modal__title">Card payment</h3>
+            <h3 class="modal__title">Оплата картой</h3>
             <div class="modal__body">
-                <label class="modal__label">Order
+                <label class="modal__label">Заказ
                     <select id="card-order-select" class="select"></select>
                 </label>
-                <label class="modal__label">Amount
-                    <input type="number" id="card-amount" class="input input--full" placeholder="Amount" step="0.01" min="0.01" required>
+                <label class="modal__label">Сумма
+                    <input type="number" id="card-amount" class="input input--full" placeholder="Сумма" step="0.01" min="0.01" required>
                 </label>
                 <span id="card-form-error" class="form-error"></span>
             </div>
             <div class="modal__footer">
-                <button type="button" id="confirm-card-btn" class="btn btn--blue">Confirm payment</button>
-                <button type="button" id="cancel-card-btn" class="btn btn--ghost">Cancel</button>
+                <button type="button" id="confirm-card-btn" class="btn btn--blue">Подтвердить</button>
+                <button type="button" id="cancel-card-btn" class="btn btn--ghost">Отмена</button>
             </div>
         </div>
     </div>
@@ -75,19 +75,19 @@
     <div id="cash-modal" class="modal" hidden>
         <div class="modal__backdrop"></div>
         <div class="modal__dialog">
-            <h3 class="modal__title">Cash payment</h3>
+            <h3 class="modal__title">Оплата наличными</h3>
             <div class="modal__body">
-                <label class="modal__label">Order
+                <label class="modal__label">Заказ
                     <select id="cash-order-select" class="select"></select>
                 </label>
-                <label class="modal__label">Amount
-                    <input type="number" id="cash-amount" class="input input--full" placeholder="Amount" step="0.01" min="0.01" required>
+                <label class="modal__label">Сумма
+                    <input type="number" id="cash-amount" class="input input--full" placeholder="Сумма" step="0.01" min="0.01" required>
                 </label>
                 <span id="cash-form-error" class="form-error"></span>
             </div>
             <div class="modal__footer">
-                <button type="button" id="confirm-cash-btn" class="btn btn--green">Confirm payment</button>
-                <button type="button" id="cancel-cash-btn" class="btn btn--ghost">Cancel</button>
+                <button type="button" id="confirm-cash-btn" class="btn btn--green">Подтвердить</button>
+                <button type="button" id="cancel-cash-btn" class="btn btn--ghost">Отмена</button>
             </div>
         </div>
     </div>
@@ -95,22 +95,22 @@
     <div id="refund-modal" class="modal" hidden>
         <div class="modal__backdrop"></div>
         <div class="modal__dialog">
-            <h3 class="modal__title">Refund</h3>
+            <h3 class="modal__title">Возврат</h3>
             <div class="modal__body">
-                <label class="modal__label">Order
+                <label class="modal__label">Заказ
                     <select id="refund-order-select" class="select"></select>
                 </label>
-                <label class="modal__label">Payment
+                <label class="modal__label">Платёж
                     <select id="refund-payment-select" class="select"></select>
                 </label>
-                <label class="modal__label">Amount
-                    <input type="number" id="refund-amount" class="input input--full" placeholder="Amount" step="0.01" min="0.01" required>
+                <label class="modal__label">Сумма
+                    <input type="number" id="refund-amount" class="input input--full" placeholder="Сумма" step="0.01" min="0.01" required>
                 </label>
                 <span id="refund-form-error" class="form-error"></span>
             </div>
             <div class="modal__footer">
-                <button type="button" id="confirm-refund-btn" class="btn btn--red">Confirm refund</button>
-                <button type="button" id="cancel-refund-btn" class="btn btn--ghost">Cancel</button>
+                <button type="button" id="confirm-refund-btn" class="btn btn--red">Подтвердить</button>
+                <button type="button" id="cancel-refund-btn" class="btn btn--ghost">Отмена</button>
             </div>
         </div>
     </div>

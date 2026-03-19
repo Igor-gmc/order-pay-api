@@ -19,6 +19,12 @@ from app.database.models.event_log import EventLog
 from app.database.session import async_session_maker, engine
 
 
+try:
+    from app.core.seed import seed_if_empty as _seed_if_empty
+except ImportError:
+    _seed_if_empty = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
@@ -26,6 +32,11 @@ async def lifespan(app: FastAPI):
             text("CREATE SEQUENCE IF NOT EXISTS order_number_seq"),
         )
         await conn.run_sync(Base.metadata.create_all)
+
+    if _seed_if_empty is not None:
+        async with async_session_maker() as session:
+            await _seed_if_empty(session)
+
     yield
 
 

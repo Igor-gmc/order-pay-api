@@ -1,31 +1,36 @@
 # Order Pay API
 
-Платёжный backend для обработки заказов, оплат (наличные и эквайринг), возвратов и синхронизации с внешним банком.
+Платёжный backend для обработки заказов, оплат (наличные и эквайринг), возвратов и синхронизации с внешним банком. Включает mock-симулятор банка и веб-интерфейс для ручного тестирования.
 
-## Стек
+![Веб-интерфейс](repo/screenshot.png)
 
-- **FastAPI** — async REST API
-- **SQLAlchemy 2.0** — async ORM (Mapped, mapped_column)
-- **PostgreSQL** — основная БД (asyncpg)
-- **Pydantic v2** — валидация и сериализация
-- **httpx** — async HTTP-клиент для интеграции с банком
+## Быстрый старт
 
-## Запуск
+### Требования
+
+- Python 3.11+
+- PostgreSQL
+
+### Установка и запуск
 
 ```bash
 # Зависимости
 pip install -r requirements.txt
 
-# PostgreSQL должен быть доступен (см. .env или config.py)
-# Default: postgresql+asyncpg://postgres:postgres@localhost:5432/order_processing
+# Настроить переменные окружения (или .env файл)
+# DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/order_processing
+# BANK_API_URL=http://localhost:8000/mock-bank
 
-# Старт
+# Запуск
 uvicorn app.main:app --reload
 ```
 
-При старте приложение автоматически:
+При первом старте приложение автоматически:
 - создаёт PostgreSQL sequence `order_number_seq` для номеров заказов
 - создаёт все таблицы через `Base.metadata.create_all`
+- заполняет БД демо-данными (4 заказа, 3 платежа, 1 возврат), если таблица `orders` пуста
+
+При повторном запуске данные не дублируются — seed выполняется только при пустой БД.
 
 ## Архитектура
 
@@ -39,17 +44,20 @@ Router (тонкий) → Service (бизнес-логика) → Repository (д
 - **Routers** — принимают HTTP, вызывают сервис, маппят ошибки в HTTP-коды
 - **Services** — вся бизнес-логика, валидация, транзакции
 - **Repositories** — чистый data access, без бизнес-решений
-- **Integrations** — адаптеры к внешним системам (банк)
+- **Integrations** — адаптеры к внешним системам (mock-банк)
 - **Schemas** — Pydantic-контракты для API и внешних систем
 
 ## Структура проекта
 
 ```
 app/
-├── main.py                          # FastAPI app, lifespan, подключение роутеров
+├── main.py                          # FastAPI app, lifespan, middleware, роутеры
 ├── core/
 │   ├── config.py                    # Settings (database_url, bank_api_url, debug)
-│   └── enums.py                     # Все статусные enum'ы
+│   ├── enums.py                     # Все статусные enum'ы
+│   ├── exceptions.py                # Доменные исключения
+│   ├── logging.py                   # Настройка логирования
+│   └── seed.py                      # Демо-данные при первом запуске (опционально)
 ├── database/
 │   ├── base.py                      # DeclarativeBase
 │   ├── session.py                   # AsyncEngine, async_session_maker, get_session
@@ -58,45 +66,98 @@ app/
 │       ├── payment.py               # Payment
 │       ├── refund.py                # Refund
 │       ├── bank_payment_state.py    # BankPaymentState
-│       └── event_log.py            # EventLog (immutable)
+│       └── event_log.py             # EventLog (immutable)
 ├── schemas/
+│   ├── common.py                    # Общие схемы
 │   ├── orders.py                    # OrderCreate, OrderRead, OrderList
 │   ├── payments.py                  # CashPaymentCreate, PaymentRead, PaymentList
-│   ├── refunds.py                   # RefundCreate, RefundRead
-│   └── bank.py                      # AcquiringPaymentCreate, BankPaymentStateRead
+│   ├── refunds.py                   # RefundCreate, RefundRead, RefundList
+│   ├── bank.py                      # AcquiringPaymentCreate, BankPaymentStateRead
+│   └── logs.py                      # EventLogRead, EventLogList
 ├── repositories/
 │   ├── orders.py                    # OrderRepository
 │   ├── payments.py                  # PaymentRepository
 │   ├── refunds.py                   # RefundRepository
-│   └── bank_payments.py             # BankPaymentRepository
+│   ├── bank_payments.py             # BankPaymentRepository
+│   └── logs.py                      # LogRepository
 ├── services/
 │   ├── order_service.py             # Создание и чтение заказов
 │   ├── payment_service.py           # Наличная и эквайринговая оплата
-│   └── refund_service.py            # Возвраты
+│   ├── refund_service.py            # Возвраты
+│   ├── bank_sync_service.py         # Синхронизация платежей с банком
+│   ├── bank_state_service.py        # Управление состоянием банковских платежей
+│   └── log_service.py               # Логирование событий
 ├── integrations/
 │   └── bank/
 │       ├── client.py                # BankClient (acquiring_start, acquiring_check)
 │       ├── schemas.py               # DTO внешнего банка
-│       └── exceptions.py            # BankUnavailableError, BankRequestError, BankPaymentNotFoundError
-└── api/
-    ├── dependencies.py              # DI: Session, OrderServiceDep, PaymentServiceDep, RefundServiceDep
-    └── routers/
-        ├── orders.py                # /orders
-        ├── payments.py              # /payments
-        └── refunds.py               # /refunds
+│       └── exceptions.py            # BankUnavailableError, BankRequestError
+├── api/
+│   ├── dependencies.py              # DI: Session, сервисы через Depends
+│   └── routers/
+│       ├── orders.py                # /orders
+│       ├── payments.py              # /payments
+│       ├── refunds.py               # /refunds
+│       ├── bank_sync.py             # /bank (синхронизация)
+│       ├── bank_simulator.py        # /mock-bank (симулятор)
+│       └── logs.py                  # /logs
+├── static/
+│   ├── css/styles.css               # Стили веб-интерфейса
+│   └── js/app.js                    # Клиентская логика
+└── templates/
+    └── index.html                   # SPA-страница
 ```
 
 ## API-эндпоинты
 
+### Заказы
+
 | Метод | URL | Описание | Коды |
 |-------|-----|----------|------|
-| GET | `/ping` | Health check | 200 |
 | POST | `/orders` | Создать заказ | 201, 409 |
 | GET | `/orders` | Список заказов | 200 |
 | GET | `/orders/{order_id}` | Заказ по ID | 200, 404 |
 | GET | `/orders/{order_id}/payments` | Платежи заказа | 200, 404 |
-| POST | `/payments/cash` | Наличная оплата | 201, 404, 409 |
-| POST | `/refunds` | Возврат по платежу | 201, 404, 409 |
+
+### Платежи
+
+| Метод | URL | Описание | Коды |
+|-------|-----|----------|------|
+| POST | `/payments/cash` | Оплата наличными | 201, 404, 409 |
+| POST | `/payments/acquiring` | Оплата картой (эквайринг) | 201, 404, 409, 502, 503 |
+
+### Возвраты
+
+| Метод | URL | Описание | Коды |
+|-------|-----|----------|------|
+| POST | `/refunds` | Создать возврат | 201, 404, 409 |
+| GET | `/payments/{payment_id}/refunds` | Возвраты по платежу | 200, 404 |
+
+### Банк (синхронизация)
+
+| Метод | URL | Описание | Коды |
+|-------|-----|----------|------|
+| GET | `/bank/payments` | Все банковские платежи | 200 |
+| GET | `/bank/payments/{payment_id}` | Состояние банковского платежа | 200, 404, 409 |
+| POST | `/bank/sync/{payment_id}` | Синхронизировать с банком | 200, 404, 409, 502, 503 |
+
+### Mock-банк (симулятор)
+
+| Метод | URL | Описание | Коды |
+|-------|-----|----------|------|
+| GET | `/mock-bank/mode` | Текущий режим (online/offline) | 200 |
+| PATCH | `/mock-bank/mode` | Переключить режим | 200 |
+| POST | `/mock-bank/acquiring/start` | Инициировать платёж | 201, 503 |
+| GET | `/mock-bank/acquiring/check/{id}` | Проверить статус платежа | 200, 404, 503 |
+| PATCH | `/mock-bank/payments/{id}/status` | Изменить статус платежа | 200, 404 |
+
+### Прочее
+
+| Метод | URL | Описание | Коды |
+|-------|-----|----------|------|
+| GET | `/logs` | Журнал событий (query: limit) | 200 |
+| GET | `/ping` | Health check | 200 |
+| GET | `/` | Веб-интерфейс | 200 |
 
 ## Модель данных
 
@@ -113,18 +174,18 @@ app/
 ### Таблицы
 
 **orders** — заказы:
-- `id` (UUID PK), `number` (unique, автогенерация через PG sequence, формат `0001`), `amount_total`, `payment_status`, `paid_amount`, `refunded_amount`, `created_at`, `updated_at`
+- `id` (UUID PK), `number` (unique, автогенерация через sequence, формат `0001`), `amount_total`, `payment_status`, `paid_amount`, `refunded_amount`, `created_at`, `updated_at`
 
-**payments** — платежи (наличные и эквайринг):
+**payments** — платежи:
 - `id` (UUID PK), `order_id` (FK → orders), `payment_type`, `amount`, `status`, `external_id` (bank_payment_id для эквайринга), `paid_at`, `created_at`, `updated_at`
 
 **refunds** — возвраты:
 - `id` (UUID PK), `payment_id` (FK → payments), `order_id` (FK → orders), `amount`, `status`, `created_at`, `updated_at`
 
-**bank_payment_states** — снимок состояния банковского платежа:
+**bank_payment_states** — состояние банковского платежа:
 - `id` (UUID PK), `payment_id` (FK → payments, unique 1:1), `bank_payment_id`, `bank_status`, `bank_amount`, `bank_paid_at`, `last_synced_at`, `sync_error`, `created_at`, `updated_at`
 
-**event_logs** — иммутабельный лог событий:
+**event_logs** — иммутабельный журнал событий:
 - `id` (UUID PK), `level`, `source`, `message`, `payload_json` (JSONB), `created_at`
 
 ### Связи
@@ -136,142 +197,73 @@ Order 1──* Payment 1──? BankPaymentState
   └───────────────* Refund
 ```
 
-## Бизнес-логика
+## Пользовательские сценарии
 
-### 1. Создание заказа
-
-```
-POST /orders { amount_total }
-```
-
-- Генерация номера через `SELECT nextval('order_number_seq')` → формат `0001`, `0002`, ...
-- Начальное состояние: `payment_status=unpaid`, `paid_amount=0`, `refunded_amount=0`
-
-### 2. Оплата наличными
+### 1. Оплата наличными
 
 ```
-POST /payments/cash { order_id, amount }
+POST /orders              { amount_total: 1000 }       → заказ (unpaid, paid=0)
+POST /payments/cash       { order_id, amount: 600 }    → заказ (partially_paid, paid=600)
+POST /payments/cash       { order_id, amount: 400 }    → заказ (paid, paid=1000)
 ```
 
-Валидация:
-- Заказ существует
-- Заказ не в статусе `paid`
-- `amount ≤ remaining` (remaining = amount_total − paid_amount)
+### 2. Оплата картой
 
-Действия в одной транзакции:
-- Создаёт `Payment(type=cash, status=completed, paid_at=now)`
-- Обновляет `order.paid_amount += amount`
-- Пересчитывает `order.payment_status`:
-  - `paid_amount >= amount_total` → `paid`
-  - `paid_amount > 0` → `partially_paid`
-  - иначе → `unpaid`
-
-### 3. Оплата картой (эквайринг)
-
-Пока доступен только на уровне сервиса (`PaymentService.create_acquiring_payment`), API-ручка не подключена.
-
-```python
-create_acquiring_payment(AcquiringPaymentCreate { order_id, amount })
+```
+POST /payments/acquiring  { order_id, amount: 500 }    → платёж (pending), банковский платёж создан
+                                                         заказ остаётся unpaid (pending не считается)
+Банк: PATCH /mock-bank/payments/{id}/status             → conducted
+POST /bank/sync/{payment_id}                            → платёж (completed), заказ обновлён
 ```
 
-Валидация — та же, что и для наличных.
+### 3. Отмена банковского платежа
 
-Действия:
-1. Вызов банка: `BankClient.acquiring_start(order_number, amount)` — **до** любых записей в БД
-2. Создаёт `Payment(type=acquiring, status=pending, external_id=bank_payment_id)` — **не** `completed`
-3. Создаёт `BankPaymentState(bank_payment_id, bank_status, bank_amount, last_synced_at=now)`
-4. **Не меняет** `order.paid_amount` и `order.payment_status` — платёж ещё не подтверждён
-
-Ключевое отличие от наличных: эквайринговый платёж при создании не является подтверждённой оплатой. Деньги зачисляются в заказ только после подтверждения от банка (sync — ещё не реализован).
-
-Если банк недоступен или вернул ошибку — транзакция не коммитится, ничего не сохраняется.
+```
+Банк: PATCH /mock-bank/payments/{id}/status             → cancelled
+POST /bank/sync/{payment_id}                            → платёж (cancelled), заказ не меняется
+```
 
 ### 4. Возврат
 
 ```
-POST /refunds { payment_id, amount }
+POST /refunds  { payment_id, amount: 300 }              → возврат создан
+                                                          платёж → part_refunded
+                                                          заказ: paid_amount -= 300, refunded_amount += 300
+POST /refunds  { payment_id, amount: 200 }              → платёж → refunded (вся сумма возвращена)
 ```
 
-Валидация:
-- Платёж существует
-- `amount ≤ available` (available = payment.amount − sum(completed refunds))
-
-Действия в одной транзакции:
-- Создаёт `Refund(status=completed)`
-- Обновляет статус платежа:
-  - вся сумма возвращена → `refunded`
-  - часть суммы → `part_refunded`
-- Обновляет заказ:
-  - `order.refunded_amount += amount`
-  - `order.paid_amount -= amount`
-  - Пересчитывает `order.payment_status`
-
-Поддерживает множественные частичные возвраты по одному платежу.
-
-### 5. Чтение платежей заказа
+### 5. Offline-режим банка
 
 ```
-GET /orders/{order_id}/payments
+PATCH /mock-bank/mode     { online: false }             → банк переходит в офлайн
+POST /payments/acquiring  { order_id, amount: 500 }     → 503 Service Unavailable
+PATCH /mock-bank/mode     { online: true }              → банк снова онлайн
 ```
 
-- Проверяет существование заказа
-- Возвращает список всех платежей заказа (desc по дате)
+### 6. Защитные проверки
 
-## Интеграция с банком
-
-### Разделение контрактов
-
-- `app/schemas/bank.py` — контракт между нашим API и фронтендом
-- `app/integrations/bank/schemas.py` — DTO для внешнего банка (отдельная граница)
-
-### BankClient
-
-Адаптер к внешнему банковскому API (`settings.bank_api_url`):
-
-| Метод | HTTP | URL | Назначение |
-|-------|------|-----|------------|
-| `acquiring_start(data)` | POST | `/acquiring/start` | Инициировать платёж |
-| `acquiring_check(bank_payment_id)` | GET | `/acquiring/check/{id}` | Проверить статус |
-
-### Исключения банка
-
-| Исключение | Когда |
-|------------|-------|
-| `BankUnavailableError` | Сеть / таймаут |
-| `BankRequestError` | Банк ответил не-2xx (хранит `status_code`, `detail`) |
-| `BankPaymentNotFoundError` | Банк вернул 404 (хранит `bank_payment_id`) |
-
-## Типичные сценарии
-
-### Полный цикл: оплата → возврат
-
-```
-1. POST /orders          { amount_total: 1000 }         → order (unpaid, paid=0)
-2. POST /payments/cash   { order_id, amount: 600 }      → order (partially_paid, paid=600)
-3. POST /payments/cash   { order_id, amount: 400 }      → order (paid, paid=1000)
-4. GET  /orders/{id}/payments                            → [payment_600, payment_400]
-5. POST /refunds         { payment_id, amount: 300 }     → order (partially_paid, paid=700, refunded=300)
-                                                           payment_600 → part_refunded
-6. POST /refunds         { payment_id, amount: 300 }     → order (partially_paid, paid=400, refunded=600)
-                                                           payment_600 → refunded
-7. POST /refunds         { payment_id, amount: 1 }       → 409 (exceeds available 0.00)
-```
-
-### Ошибки
-
-| Ситуация | HTTP-код | Пример |
-|----------|----------|--------|
+| Ситуация | HTTP-код | Сообщение |
+|----------|----------|-----------|
+| Переплата (сумма > остаток) | 409 | `Payment amount 500 exceeds remaining 200` |
+| Повторная оплата оплаченного заказа | 409 | `Order '0001' is already fully paid` |
+| Возврат больше доступного | 409 | `Refund amount 100 exceeds available 50` |
 | Заказ/платёж не найден | 404 | `Order '{id}' not found` |
-| Заказ уже полностью оплачен | 409 | `Order '0001' is already fully paid` |
-| Сумма оплаты больше остатка | 409 | `Payment amount 500 exceeds remaining 200` |
-| Сумма возврата больше доступного | 409 | `Refund amount 100 exceeds available 50` |
 
-## Что ещё не реализовано
+## Веб-интерфейс
 
-- API-ручка для эквайринговой оплаты (`POST /payments/acquiring`)
-- Синхронизация с банком (bank sync)
-- Mock-симулятор банка
-- Event logging
-- Фронтенд (templates/static)
-- Миграции Alembic
-- Тесты
+Доступен по адресу `http://localhost:8000`. Одностраничное приложение с тремя панелями:
+
+- **Компания** — создание заказов, оплата наличными/картой, возвраты. Таблица заказов с номером, суммой, статусом оплаты, суммой возвратов
+- **Банк** — управление mock-банком: переключение online/offline, просмотр банковских платежей, изменение статусов, синхронизация
+- **Журнал** — иммутабельный лог всех событий системы (HTTP-запросы, действия сервисов)
+
+## Стек технологий
+
+| Технология | Назначение |
+|------------|------------|
+| FastAPI | Async REST API фреймворк |
+| SQLAlchemy 2.0 | Async ORM (Mapped, mapped_column) |
+| PostgreSQL | Основная БД (asyncpg) |
+| Pydantic v2 | Валидация и сериализация |
+| httpx | Async HTTP-клиент для интеграции с банком |
+| Jinja2 | Шаблонизатор для веб-интерфейса |
