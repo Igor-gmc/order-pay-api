@@ -18,13 +18,11 @@
                 <form id="create-order-form" class="inline-form">
                     <input type="number" id="order-amount" class="input" placeholder="Amount" step="0.01" min="0.01" required>
                     <button type="submit" class="btn">Create order</button>
-                    <span id="order-form-error" class="form-error"></span>
-                </form>
-                <div class="inline-form">
                     <button type="button" id="open-cash-btn" class="btn btn--green">Pay cash</button>
                     <button type="button" id="open-card-btn" class="btn btn--blue">Pay card</button>
                     <button type="button" id="open-refund-btn" class="btn btn--red">Refund</button>
-                </div>
+                    <span id="order-form-error" class="form-error"></span>
+                </form>
             </div>
             <div class="panel__body" id="orders-list"></div>
         </section>

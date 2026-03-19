@@ -89,9 +89,9 @@ function renderOrders(orders) {
     const rows = orders.map(o => `
         <tr>
             <td class="cell--mono">${o.number}</td>
-            <td class="cell--right">${formatMoney(o.amount_total)}</td>
-            <td class="cell--right">${formatMoney(o.paid_amount)}</td>
-            <td class="cell--right">${formatMoney(o.refunded_amount)}</td>
+            <td>${formatMoney(o.amount_total)}</td>
+            <td>${formatMoney(o.paid_amount)}</td>
+            <td>${formatMoney(o.refunded_amount)}</td>
             <td><span class="badge ${STATUS_CLASSES[o.payment_status] || ""}">${STATUS_LABELS[o.payment_status] || o.payment_status}</span></td>
             <td class="cell--muted">${formatDate(o.created_at)}</td>
         </tr>
@@ -102,9 +102,9 @@ function renderOrders(orders) {
             <thead>
                 <tr>
                     <th>Number</th>
-                    <th class="cell--right">Total</th>
-                    <th class="cell--right">Paid</th>
-                    <th class="cell--right">Refunded</th>
+                    <th>Total</th>
+                    <th>Paid</th>
+                    <th>Refunded</th>
                     <th>Status</th>
                     <th>Created</th>
                 </tr>
@@ -315,7 +315,7 @@ function renderBankPayments(items) {
             <td class="cell--mono cell--muted" title="${b.payment_id}">${b.payment_id.slice(0, 8)}</td>
             <td class="cell--mono cell--muted" title="${b.bank_payment_id}">${b.bank_payment_id.slice(0, 12)}</td>
             <td><span class="badge ${BANK_STATUS_CLASSES[b.bank_status] || "badge--muted"}">${b.bank_status}</span></td>
-            <td class="cell--right">${formatMoney(b.bank_amount)}</td>
+            <td>${formatMoney(b.bank_amount)}</td>
             <td class="cell--muted">${formatDate(b.last_synced_at)}</td>
             <td class="cell--error">${b.sync_error || ""}</td>
             <td class="cell--actions">
@@ -333,7 +333,7 @@ function renderBankPayments(items) {
                     <th>Payment</th>
                     <th>Bank ID</th>
                     <th>Status</th>
-                    <th class="cell--right">Amount</th>
+                    <th>Amount</th>
                     <th>Synced</th>
                     <th>Error</th>
                     <th>Actions</th>
