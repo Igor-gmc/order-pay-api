@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import PaymentStatus, PaymentType
@@ -34,7 +34,7 @@ class Payment(Base):
         server_default=PaymentStatus.PENDING.value,
     )
     external_id: Mapped[str | None] = mapped_column(String(128), default=None)
-    paid_at: Mapped[datetime | None] = mapped_column(default=None)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(),
     )
