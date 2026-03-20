@@ -1,0 +1,103 @@
+// Order Pay API — схема БД для dbdiagram.io
+// Источник истины: app/database/models/ + repo/architecture.md
+
+// ─── Enums ───────────────────────────────────────────────
+
+Enum order_payment_status {
+  unpaid
+  partially_paid
+  paid
+}
+
+Enum payment_type {
+  cash
+  acquiring
+}
+
+Enum payment_status {
+  pending
+  completed
+  cancelled
+  part_refunded
+  refunded
+  failed
+}
+
+Enum bank_payment_status {
+  received
+  conducted
+  cancelled
+  refunded
+}
+
+Enum refund_status {
+  completed
+  failed
+}
+
+// ─── Tables ──────────────────────────────────────────────
+
+Table orders {
+  id uuid [pk, default: `gen_random_uuid()`]
+  number varchar(64) [not null, unique]
+  amount_total numeric(12,2) [not null]
+  payment_status order_payment_status [not null, default: 'unpaid']
+  paid_amount numeric(12,2) [not null, default: 0]
+  refunded_amount numeric(12,2) [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Заказ. Хранит итоговую сумму, агрегаты оплат/возвратов и статус оплаты.'
+}
+
+Table payments {
+  id uuid [pk, default: `gen_random_uuid()`]
+  order_id uuid [not null, ref: > orders.id]
+  payment_type payment_type [not null]
+  amount numeric(12,2) [not null]
+  status payment_status [not null, default: 'pending']
+  external_id varchar(128) [unique]
+  paid_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Единая модель платежа для cash и acquiring.'
+}
+
+Table refunds {
+  id uuid [pk, default: `gen_random_uuid()`]
+  payment_id uuid [not null, ref: > payments.id]
+  order_id uuid [not null, ref: > orders.id]
+  amount numeric(12,2) [not null]
+  status refund_status [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Возврат по конкретному платежу. Поддерживает частичные и множественные возвраты.'
+}
+
+Table bank_payment_states {
+  id uuid [pk, default: `gen_random_uuid()`]
+  payment_id uuid [not null, unique, ref: > payments.id]
+  bank_payment_id varchar(128) [not null]
+  bank_status bank_payment_status [not null]
+  bank_amount numeric(12,2) [not null]
+  bank_paid_at timestamptz
+  last_synced_at timestamptz [default: `now()`]
+  sync_error text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Текущее известное состояние банковского платежа во внешней системе.'
+}
+
+Table event_logs {
+  id uuid [pk, default: `gen_random_uuid()`]
+  level varchar(16) [not null]
+  source varchar(128) [not null]
+  message text [not null]
+  payload_json jsonb
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Логи бизнес-событий и интеграционных событий для UI и отладки.'
+}

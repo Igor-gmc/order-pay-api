@@ -159,6 +159,12 @@ app/
 | GET | `/ping` | Health check | 200 |
 | GET | `/` | Веб-интерфейс | 200 |
 
+## Схема БД
+
+![Схема базы данных](docs/db_scheme.png)
+
+Исходный код схемы для [dbdiagram.io](https://dbdiagram.io/) — [`docs/dbdiagram.dbml`](docs/dbdiagram.dbml)
+
 ## Модель данных
 
 ### Enum'ы
